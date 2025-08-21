@@ -1,0 +1,41 @@
+Sub SuperFastSetFontByLanguage_AllPages()
+    Dim doc As Document
+    Dim para As Paragraph
+    Dim word As Range
+    Dim firstChar As String
+    Dim code As Long
+
+    Set doc = ActiveDocument
+
+    Application.ScreenUpdating = False
+
+    ' Set line spacing to exactly 16 pt
+    For Each para In doc.Paragraphs
+        para.LineSpacingRule = wdLineSpaceExactly
+        para.LineSpacing = 16
+    Next para
+
+    ' Apply fonts
+    For Each para In doc.Paragraphs
+        For Each word In para.Range.Words
+            firstChar = Trim$(Left$(word.Text, 1))
+            
+            If Len(firstChar) > 0 Then
+                code = AscW(firstChar)
+                
+                ' Devanagari (Hindi)
+                If code >= &H900 And code <= &H97F Then
+                    word.Font.Name = "Mangal"
+
+                ' Everything else (English, digits, punctuation, symbols)
+                ElseIf code >= 32 Then
+                    word.Font.Name = "Bookman Old Style"
+                End If
+            End If
+        Next word
+    Next para
+
+    Application.ScreenUpdating = True
+
+    MsgBox "Fonts and line spacing updated.", vbInformation
+End Sub
