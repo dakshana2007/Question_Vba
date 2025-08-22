@@ -1,41 +1,46 @@
-Sub SuperFastSetFontByLanguage_AllPages()
-    Dim doc As Document
-    Dim para As Paragraph
-    Dim word As Range
-    Dim firstChar As String
-    Dim code As Long
+Sub FormatHindiEnglishKeepEquations()
 
+    Dim doc As Document
     Set doc = ActiveDocument
+
+    Dim para As Paragraph
+    Dim rng As Range
+    Dim ch As String
+    Dim code As Long
+    Dim i As Long
+    Dim tempRng As Range
 
     Application.ScreenUpdating = False
 
-    ' Set line spacing to exactly 16 pt
+    ' Loop through all paragraphs in the document
     For Each para In doc.Paragraphs
-        para.LineSpacingRule = wdLineSpaceExactly
-        para.LineSpacing = 16
-    Next para
+        ' Work on paragraph text (exclude paragraph mark at end)
+        Set rng = para.Range
+        rng.End = rng.End - 1
 
-    ' Apply fonts
-    For Each para In doc.Paragraphs
-        For Each word In para.Range.Words
-            firstChar = Trim$(Left$(word.Text, 1))
-            
-            If Len(firstChar) > 0 Then
-                code = AscW(firstChar)
-                
-                ' Devanagari (Hindi)
+        ' Loop through each character
+        For i = 1 To rng.Characters.Count
+            Set tempRng = rng.Characters(i)
+
+            ' Skip if inside equation
+            If tempRng.OMaths.Count = 0 Then
+                ch = tempRng.Text
+                code = AscW(ch)
+
+                ' Hindi Devanagari Unicode block
                 If code >= &H900 And code <= &H97F Then
-                    word.Font.Name = "Mangal"
+                    tempRng.Font.Name = "Mangal"
 
-                ' Everything else (English, digits, punctuation, symbols)
-                ElseIf code >= 32 Then
-                    word.Font.Name = "Bookman Old Style"
+                ' English alphabets
+                ElseIf (code >= 65 And code <= 90) Or (code >= 97 And code <= 122) Then
+                    tempRng.Font.Name = "Bookman Old Style"
                 End If
             End If
-        Next word
+        Next i
     Next para
 
     Application.ScreenUpdating = True
+    MsgBox "? Done! English ? Bookman Old Style, Hindi ? Mangal, Equations untouched.", vbInformation
 
-    MsgBox "Fonts and line spacing updated.", vbInformation
 End Sub
+
