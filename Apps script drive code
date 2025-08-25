@@ -1,0 +1,18 @@
+function listFilesFast() {
+  const folderId = "1McEeSbnEg5evY1elmXXktIVejOHJ0bAZ"; // Replace with your folder ID
+  const folder = DriveApp.getFolderById(folderId);
+  const files = folder.getFiles();
+
+  const data = [];
+
+  while (files.hasNext()) {
+    const file = files.next();
+    const name = file.getName().replace(/\.[^/.]+$/, ""); // Remove extension
+    const link = `=HYPERLINK("${file.getUrl()}")`;
+    data.push([name, link]);
+  }
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  sheet.clearContents();
+  sheet.getRange(1, 1, data.length, 2).setValues(data);
+}
