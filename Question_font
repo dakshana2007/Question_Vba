@@ -1,46 +1,65 @@
-Sub FormatHindiEnglishKeepEquations()
-
+Sub FormatPreserveEquationsAndImages()
     Dim doc As Document
-    Set doc = ActiveDocument
-
     Dim para As Paragraph
-    Dim rng As Range
-    Dim ch As String
+    Dim word As Range
+    Dim firstChar As String
     Dim code As Long
+    Dim rng As Range
+    Dim hasEquation As Boolean
+    Dim hasInlineShape As Boolean
+    Dim omath As omath
     Dim i As Long
-    Dim tempRng As Range
 
+    Set doc = ActiveDocument
     Application.ScreenUpdating = False
 
-    ' Loop through all paragraphs in the document
+    ' Step 1: Loop through all paragraphs
     For Each para In doc.Paragraphs
-        ' Work on paragraph text (exclude paragraph mark at end)
         Set rng = para.Range
-        rng.End = rng.End - 1
+        hasEquation = False
+        hasInlineShape = False
 
-        ' Loop through each character
-        For i = 1 To rng.Characters.Count
-            Set tempRng = rng.Characters(i)
-
-            ' Skip if inside equation
-            If tempRng.OMaths.Count = 0 Then
-                ch = tempRng.Text
-                code = AscW(ch)
-
-                ' Hindi Devanagari Unicode block
-                If code >= &H900 And code <= &H97F Then
-                    tempRng.Font.Name = "Mangal"
-
-                ' English alphabets
-                ElseIf (code >= 65 And code <= 90) Or (code >= 97 And code <= 122) Then
-                    tempRng.Font.Name = "Bookman Old Style"
-                End If
+        ' Check for equations
+        For i = 1 To doc.OMaths.Count
+            If Not (rng.End < doc.OMaths(i).Range.Start Or rng.Start > doc.OMaths(i).Range.End) Then
+                hasEquation = True
+                Exit For
             End If
         Next i
+
+        ' Check for inline images
+        For i = 1 To rng.InlineShapes.Count
+            If Not rng.InlineShapes(i) Is Nothing Then
+                hasInlineShape = True
+                Exit For
+            End If
+        Next i
+
+        ' Only apply line spacing if there's no equation or image
+        If Not hasEquation And Not hasInlineShape Then
+            With para.Format
+                .LineSpacingRule = wdLineSpaceExactly
+                .LineSpacing = 13
+                .SpaceBefore = 1
+                .SpaceAfter = 2
+            End With
+        End If
+
+        ' Apply fonts to each word
+        For Each word In rng.Words
+            firstChar = Trim$(Left$(word.Text, 1))
+            If Len(firstChar) > 0 Then
+                code = AscW(firstChar)
+                If code >= &H900 And code <= &H97F Then
+                    word.Font.Name = "Mangal"
+                ElseIf code >= 32 Then
+                    word.Font.Name = "Bookman Old Style"
+                End If
+            End If
+        Next word
     Next para
 
     Application.ScreenUpdating = True
-    MsgBox "? Done! English ? Bookman Old Style, Hindi ? Mangal, Equations untouched.", vbInformation
-
+    MsgBox "? Formatting applied. Equations and images preserved.", vbInformation
 End Sub
 
