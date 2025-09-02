@@ -1,42 +1,42 @@
-Sub FormatPreserveEquationsAndImages()
+Sub FormatPreserveEquationsAndImages_Optimized()
     Dim doc As Document
     Dim para As Paragraph
-    Dim word As Range
-    Dim firstChar As String
-    Dim code As Long
     Dim rng As Range
-    Dim hasEquation As Boolean
-    Dim hasInlineShape As Boolean
-    Dim omath As omath
+    Dim omathRange As Range
+    Dim skipFormatting As Boolean
+    Dim omath As OMath
+    Dim eqRanges() As Range
     Dim i As Long
 
     Set doc = ActiveDocument
     Application.ScreenUpdating = False
 
-    ' Step 1: Loop through all paragraphs
+    ' Cache all equation ranges
+    ReDim eqRanges(1 To doc.OMaths.Count)
+    For i = 1 To doc.OMaths.Count
+        Set eqRanges(i) = doc.OMaths(i).Range
+    Next i
+
+    ' Loop through paragraphs
     For Each para In doc.Paragraphs
         Set rng = para.Range
-        hasEquation = False
-        hasInlineShape = False
+        skipFormatting = False
 
-        ' Check for equations
-        For i = 1 To doc.OMaths.Count
-            If Not (rng.End < doc.OMaths(i).Range.Start Or rng.Start > doc.OMaths(i).Range.End) Then
-                hasEquation = True
+        ' Skip if paragraph contains an equation
+        For i = LBound(eqRanges) To UBound(eqRanges)
+            If Not (rng.End < eqRanges(i).Start Or rng.Start > eqRanges(i).End) Then
+                skipFormatting = True
                 Exit For
             End If
         Next i
 
-        ' Check for inline images
-        For i = 1 To rng.InlineShapes.Count
-            If Not rng.InlineShapes(i) Is Nothing Then
-                hasInlineShape = True
-                Exit For
-            End If
-        Next i
+        ' Skip if paragraph contains inline image
+        If rng.InlineShapes.Count > 0 Then
+            skipFormatting = True
+        End If
 
-        ' Only apply line spacing if there's no equation or image
-        If Not hasEquation And Not hasInlineShape Then
+        ' Apply paragraph spacing only if no equation/image
+        If Not skipFormatting Then
             With para.Format
                 .LineSpacingRule = wdLineSpaceExactly
                 .LineSpacing = 13
@@ -45,21 +45,25 @@ Sub FormatPreserveEquationsAndImages()
             End With
         End If
 
-        ' Apply fonts to each word
-        For Each word In rng.Words
-            firstChar = Trim$(Left$(word.Text, 1))
-            If Len(firstChar) > 0 Then
-                code = AscW(firstChar)
-                If code >= &H900 And code <= &H97F Then
-                    word.Font.Name = "Mangal"
-                ElseIf code >= 32 Then
-                    word.Font.Name = "Bookman Old Style"
+        ' Apply font in bulk by language
+        Set rng = para.Range
+        For i = 1 To rng.Words.Count
+            With rng.Words(i)
+                If Len(Trim(.Text)) > 0 Then
+                    Dim ch As String
+                    ch = Left$(Trim(.Text), 1)
+                    Dim code As Long
+                    code = AscW(ch)
+                    If code >= &H0900 And code <= &H097F Then
+                        .Font.Name = "Mangal"
+                    Else
+                        .Font.Name = "Bookman Old Style"
+                    End If
                 End If
-            End If
-        Next word
+            End With
+        Next i
     Next para
 
     Application.ScreenUpdating = True
-    MsgBox "? Formatting applied. Equations and images preserved.", vbInformation
+    MsgBox "✅ Formatting applied successfully.", vbInformation
 End Sub
-
